@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html"
+      xmlns:v-on="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Index</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"/>
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+</head>
+<body>
+<h1>questo titolo non è nell'obj Vue</h1>
+
+<div id="page">
+    <span v-if="logged">
+        <p> Ciao <strong>{{this.un}}!</strong> Cosa vuoi fare? (login con permessi <strong>{{role}}</strong>)</p>
+    </span>
+
+    <span v-else>
+        <h1>Login (asincrono gestito da jquery/vue)</h1>
+        <p> Username:<input v-model="un" type="text"> </p>
+        <p> Password:<input v-model="psw" type="text"></p>
+        <button v-on:click="login">LOGIN</button>
+    </span>
+
+    <h2>cerca ripetizioni</h2>
+<!--
+     V  creazione menù a tendina    V
+-->
+        <script>
+            matArray = ['reti1', 'prog3', 'ium', 'tweb'];
+            profArray = ['ardissono', 'segnan'];
+            $(document).ready(function (){
+                let menuMaterie = document.getElementById("matScelta");
+                for(let i = 0; i < matArray.length; i++) {
+                    let opt = matArray[i];
+                    let el = document.createElement("option");
+                    el.textContent = opt;
+                    el.value = opt;
+                    menuMaterie.appendChild(el);
+                }
+                let menuProf = document.getElementById("profScelta");
+                for(let i = 0; i < profArray.length; i++) {
+                    let opt = profArray[i];
+                    let el = document.createElement("option");
+                    el.textContent = opt;
+                    el.value = opt;
+                    menuProf.appendChild(el);
+                }
+
+            })
+        </script>
+
+    <form id="cercaRip">
+        <label>Materia  </label><select id="matScelta">
+            <option>any</option>
+        </select>
+        <label>Professore  </label><select id="profScelta">
+            <option>any</option>
+        </select>
+        <label>Giorno  </label><select id="giornoScelta">
+            <option>any</option>
+            <option>LUN</option>
+            <option>MAR</option>
+            <option>MER</option>
+            <option>GIO</option>
+            <option>VEN</option>
+        </select>
+        <label>Ora  </label><select id="oraScelta">
+            <option>any</option>
+            <option>15-16</option>
+            <option>16-17</option>
+            <option>17-18</option>
+            <option>18-19</option>
+        </select>
+
+        <button v-on:click="cerca">CERCA</button>
+    </form>
+
+    <span v-model="tabResult"></span>
+
+</div>
+<script>
+    new Vue({
+        el:'#page',
+        data:{
+            role: 'guest',
+            servlet1: '/java/com/example/progetto1/HelloServlet.java',
+            un:'username',
+            psw:'password',
+            logged: false,
+            tabResult: ''
+        },
+        methods:{
+            login:function () {
+                var self=this;
+                $.post(self.servlet1, {"action":"login", "username":self.un, "password":self.psw}, function(data){
+                    //in data c'è l'oggetto json che torna dal login, con parametri username e role
+                    if(data.role === 'admin' || data.role==='user'){
+                        self.logged = true;
+                        self.role = data.role;
+                        self.username = data.username;
+                        /*todo capire come risolvere la gestione sessioni utente:
+                           deve farlo la servlet e dirlo al web (vue/JS) */
+                    } else {
+                        self.logged = false;
+                    }
+                })
+            },
+            cerca:function () {
+                var self = this;
+                let params = {
+                    "materia": document.getElementById("matScelta").valueOf(),
+                    "prof": document.getElementById("profScelta").valueOf(),
+                    "settimana": document.getElementById("settScelta").valueOf(),
+                    "giorno": document.getElementById("giornoScelta").valueOf(),
+                    "ora": document.getElementById("oraScelta").valueOf(),
+                }
+                $.post(self.servlet1, {"whatDo":"cercaRip", "searched":JSON.stringify(params)}, function(data) {
+                    //data è il json che contiene le tuple richieste proveniente dalla servlet (con l'out.print)
+                    self.tabResult = JSON.parse(data);
+                })
+            }
+        }
+    })
+</script>
+</body>
+</html>

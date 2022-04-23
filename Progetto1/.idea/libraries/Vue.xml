@@ -1,0 +1,14 @@
+<component name="libraryTable">
+  <library name="Vue" type="javaScript">
+    <properties>
+      <sourceFilesUrls>
+        <item url="file://$USER_HOME$/vue/vue.js" />
+      </sourceFilesUrls>
+    </properties>
+    <CLASSES>
+      <root url="file://$USER_HOME$/vue/vue.js" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
