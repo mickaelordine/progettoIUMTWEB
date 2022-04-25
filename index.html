@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html"
+      xmlns:v-on="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Index</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <meta http-equiv="Cache-Control" content="no-store" />
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<div id="login" class="login">
+    <h1>Benvennuto nel sito per prenotare le ripetizioni</h1>
+    <h3>per effetuare alle ripetizioni effettuare prima il login</h3>
+    <div class="LoginButton">
+    <label>
+        <input type="text" v-model="email" placeholder="Enter Email"/>
+        <input type="text" v-model="password" placeholder="Enter Password"/>
+    </label>
+    </div>
+    <button v-on:click="LogIn">LogIn</button>
+</div>
+
+<div id="ripetizioni">
+    <button v-on:click="caricaRipe">refresh</button>
+    <span v-if="refresh_fatto">
+    <ol>
+        <li v-for="todo in corsi">
+            {{ todo.text }}
+        </li>
+    </ol>
+    </span>
+</div>
+
+
+
+
+<script>
+    new Vue({
+        el:"#login",
+        data:{
+            loggedIn : false,
+            email: "",
+            password: "",
+            myUrl:"http://localhost:8080/Progetto1_war_exploded/servlet1",
+            response: ""
+        },
+        methods:{
+            LogIn: function (){
+                const self = this;
+                if(this.email === "" && this.password === ""){
+                    alert("Per favore, non lasciare campi vuoti");
+                }else{
+                    $.post(self.myUrl, {"action":"login", "username":this.email, "password":this.password}, function(data){
+                        if(data === "logged in") { //non ha funzionato
+                            self.loggedIn = true
+                            console.log(self.loggedIn) //true
+                            alert("Login effettuato con successo" + data)
+                        } else {
+                            alert("Error")
+                        }
+                    })
+                }
+            },
+
+        }
+    })
+</script>
+<script>
+    new Vue({
+        el:"#ripetizioni",
+        data:{
+            corsi:"",
+            refresh_fatto: false,
+            myUrl:"http://localhost:8080/Progetto1_war_exploded/servlet1",
+        },
+        methods: {
+            caricaRipe : function (){
+                const self = this;
+                $.post(self.myUrl, {"action":"viewAllRip"}, function(data){
+                        self.refresh_fatto = true
+                        self.corsi = data.toString()
+                })
+            }
+        }
+    })
+</script>
+</body>
+
+
+<style>
+    /** {*/
+    /*    padding: 0;*/
+    /*    margin: 0;*/
+    /*    color: #1a1f36;*/
+    /*    box-sizing: border-box;*/
+    /*    word-wrap: break-word;*/
+    /*    font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Ubuntu,sans-serif;*/
+    /*}*/
+    /*body {*/
+    /*    min-height: 100%;*/
+    /*    background-color: #ffffff;*/
+    /*}*/
+    /*h1 {*/
+    /*    letter-spacing: -1px;*/
+    /*}*/
+    /*.login{*/
+    /*    min-height: 692px;*/
+    /*    position: fixed;*/
+    /*    bottom: 0;*/
+    /*    left: 0;*/
+    /*    right: 0;*/
+    /*    top: 0;*/
+    /*    z-index: 0;*/
+    /*    overflow: hidden;*/
+    /*}*/
+    /*.LoginButton{*/
+
+    /*}*/
+</style>
+</html>
+
