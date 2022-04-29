@@ -72,7 +72,7 @@ public class DBA {
             DriverManager.registerDriver(new com.mysql.jdbc.Driver());
             System.out.println("Driver correttamente registrato");
         } catch (SQLException e) {
-            throw new ServletException(e.getMessage());
+            throw new ServletException("registerDriver");
         }
     }
 
@@ -99,7 +99,7 @@ public class DBA {
                         result = "wrong psw";
                     } else {
                         System.out.println("login successful");
-                        role = matchingAccounts.get(0).getRole();
+                        this.role = matchingAccounts.get(0).getRole();
                         this.username = username;
                         this.userDB = "user";
                         result = "logged in";
@@ -118,7 +118,6 @@ public class DBA {
     }
 
     //USERS
-    //      /!\ è private, dev'essere chiamato solo da metodi di questa classe
     //      used only in auth()
     private ArrayList<Account> qryUsers(String reqName) throws ServletException {
         if(role.equals("admin")) {
@@ -131,7 +130,7 @@ public class DBA {
                     String qry = "select * from users where username = ?";
                     PreparedStatement st = conn1.prepareStatement(qry);
                     st.setString(1, reqName);
-                    System.out.println(st);
+//                    System.out.println(st);
                     ResultSet rs = st.executeQuery();
                     while (rs.next()) {
                         Account c = new Account(rs.getString("username"),
@@ -159,7 +158,6 @@ public class DBA {
     //RIPETIZIONI
 
     //  -inizializza il JDB
-    //      /!\ è private, dev'essere chiamato solo da metodi di questa classe
     //      used in:  DBA(), insert/removeInsegnamento()
     private void updRip() throws ServletException {
         ArrayList<Ripetizioni> rips = new ArrayList<>();
@@ -168,7 +166,7 @@ public class DBA {
             conn1 = DriverManager.getConnection(urlDB, userDB, pswDB);
             if (conn1 != null) {
                 System.out.println("Connected to the database test - updRip");
-                updPren();
+                updAllPren();
                 String qry = "SELECT professore.id, professore.cognome, corso.id, corso.nome " +
                                 "from (insegnamenti join corso on insegnamenti.corso_id = corso.id) " +
                                 "join professore on professore.id = insegnamenti.prof_id";
@@ -208,7 +206,7 @@ public class DBA {
                 System.out.println("JDB-Rip popolato");
             }
         } catch (SQLException e) {
-            throw new ServletException("SQL exc in updRip: "+ e.getMessage());
+            throw new ServletException("SQLException in updRip");
         }
         finally {
             if (conn1 != null) {
@@ -222,8 +220,7 @@ public class DBA {
     }
 
     //  -prenotabile?
-    //      /!\ è private, dev'essere chiamato solo da metodi di questa classe
-    //      used in: //todo dov'è usato?
+    //      used only in prenota()
     private boolean prenotabile(Ripetizioni r){
         for (Prenotazione p: allPrenot) {
             Ripetizioni ripPren = p.getRip();
@@ -270,9 +267,9 @@ public class DBA {
     //  - mostra tutte
     //      getAllRipet() sopra
 
-    //  - mantieni consistente
+    //  - copia il DB nel JDB
     //      public con roleCheck
-    public ArrayList<Prenotazione> updAllPrenot() throws ServletException {
+    public void updAllPren() throws ServletException {
         if (role.equals("admin")) {
             Connection conn1 = null;
             ArrayList<Prenotazione> prenots = new ArrayList<>();
@@ -282,7 +279,7 @@ public class DBA {
                     System.out.println("Connected to the database test - in allPrenot");
                     String qry = "SELECT user, professore.cognome, corso.nome, giorno, ora, status " +
                             "from ((prenotazioni AS p join professore on p.prof_id=professore.id) " +
-                            "join corso on corso.id=p.corso_id ) where 1 ";
+                            "join corso on corso.id=p.corso_id )";
 
                     PreparedStatement st = conn1.prepareStatement(qry);
                     //  System.out.println(st);
@@ -299,6 +296,7 @@ public class DBA {
                         );
                         prenots.add(p);
                     }
+                    allPrenot = prenots;
                 }
             } catch (SQLException e) {
                 throw new ServletException("SQL exc in allPrenot: " + e.getMessage());
@@ -311,14 +309,13 @@ public class DBA {
                     }
                 }
             }
-            return allPrenot;
         } else {
             System.out.println("role needed - allPrenot");
             throw new ServletException("role needed - allPrenot");
         }
     }
 
-    //  - mantieni consistente le mie
+    //  - copia le mie dal DB in myArchive
     //      public con roleCheck
     public void updMyArchive() throws ServletException {
         if (role.equals("user") || role.equals("admin")) {
@@ -326,14 +323,13 @@ public class DBA {
             try {
                 conn1 = DriverManager.getConnection(urlDB, userDB, pswDB);
                 if (conn1 != null) {
-                    System.out.println("Connected to the database test - in allPrenot");
+                    System.out.println("Connected to the database test - in updMyArchive");
                     String qry = "SELECT user, professore.cognome, corso.nome, giorno, ora, status " +
                             "from ((prenotazioni AS p join professore on p.prof_id=professore.id) " +
                             "join corso on corso.id=p.corso_id ) where user = ?";
 
                     PreparedStatement st = conn1.prepareStatement(qry);
                     st.setString(1, this.username);
-                    //  System.out.println(st);
                     ResultSet rs = st.executeQuery();
                     myArchive.clear();
                     while (rs.next()) {
@@ -348,6 +344,8 @@ public class DBA {
                         );
                         myArchive.add(p);
                     }
+                    System.out.println("myArchive updated: " + myArchive.size() + " prenotazioni a mio nome");
+
                 }
             } catch (SQLException e) {
                 throw new ServletException("SQL exc in allPrenot: " + e.getMessage());
@@ -366,8 +364,7 @@ public class DBA {
         }
     }
 
-    //  -mostra per user
-    //      public con roleCheck
+    //  - MAI USATO
     public ArrayList<Prenotazione> myPrenot() throws ServletException {
         if(this.role.equals("user")) {
             Connection conn1 = null;
@@ -375,7 +372,7 @@ public class DBA {
             try {
                 conn1 = DriverManager.getConnection(urlDB, userDB, pswDB);
                 if (conn1 != null) {
-                    System.out.println("Connected to the database test - in allPrenot");
+                    System.out.println("Connected to the database test - in myPrenot");
                     String qry = "SELECT user, professore.cognome, corso.nome, giorno, ora , status " +
                             "from ((prenotazioni AS p join professore on p.prof_id=professore.id) " +
                             "join corso on corso.id=p.corso_id ) where user=? ";
@@ -415,30 +412,6 @@ public class DBA {
         }
     }
 
-    //  -mantiene consistenti JDB con mySQL
-    void updPren() throws ServletException {
-        Connection conn1 = null;
-        try {
-            conn1 = DriverManager.getConnection(urlDB, userDB, pswDB);
-            if (conn1 != null) {
-                System.out.println("Connected to the database test - in updPren - calling updAllPrenot");
-                allPrenot = updAllPrenot();
-            }
-        } catch (SQLException e) {
-            throw new ServletException("SQL exc in updPren: "+ e.getMessage());
-        } catch (ServletException e){
-            throw e;
-        }finally {
-            if (conn1 != null) {
-                try {
-                    conn1.close();
-                } catch (SQLException e2) {
-                    System.out.println(e2.getMessage());
-                }
-            }
-        }
-    }
-
     //  -prenota
     public int prenota(Ripetizioni ripetDP) throws ServletException {
         if(this.role.equals("user") || this.role.equals("admin")) {
@@ -449,11 +422,9 @@ public class DBA {
                 if (conn1 != null) {
                     System.out.println("Connected to the database test - in prenota");
                     if (prenotabile(ripetDP)) {
-                        // aggiunta nel JDB
                         Ripetizioni rDP = ripetDP;
                         rDP.setStatus(1);
-                        allPrenot.add(new Prenotazione(this.username, rDP));
-                        myArchive.add(new Prenotazione(this.username, rDP));
+
                         // aggiunta nel DB MySql
                         String profDP = rDP.getProf();
                         String corsoDP = rDP.getCorso();
@@ -474,23 +445,26 @@ public class DBA {
                             insSt.setString(5, profDP);
                             nIns = insSt.executeUpdate();
                             if (nIns == 1) {
-                                System.out.println(nIns + " tupla inserita");
+                                //inserisco nel JDB
+                                allPrenot.add(new Prenotazione(this.username, rDP));
+                                myArchive.add(new Prenotazione(this.username, rDP));
+
+                                System.out.println(nIns + " tupla inserita nel DB e nel JDB");
+
+                                //aggiorno le altre ripetizioni nel JDB
+                                for (Ripetizioni r : allRipet) {
+                                    if (r.equals(ripetDP)) {
+                                        r.setStatus(1);
+                                    } else if (r.overlaps(ripetDP)) {
+                                        r.setStatus(2);
+                                    }
+                                }
                             } else {
                                 System.out.println("something went wrong");
                             }
                         } catch (SQLException e) {
                             System.out.println("exc in prenota: " + e.getMessage());
                         }
-
-                        //aggiorno le altre ripetizioni nel JDB
-                        for (Ripetizioni r : allRipet) {
-                            if (r.equals(ripetDP)) {
-                                r.setStatus(1);
-                            } else if (r.overlaps(ripetDP)) {
-                                r.setStatus(2);
-                            }
-                        }
-
                     } else {
                         System.out.println("ripetizione non prenotabile");
                     }
@@ -582,52 +556,61 @@ public class DBA {
             throw new ServletException("role required - disdici");
         }
     }
+
     //  -segna come svolta
     public int setDone(Prenotazione pSD) throws ServletException {
-        if(role.equals("user")) {
-            //rimozione JDB
+        if(role.equals("user") || role.equals("admin")) {
+            int nUpd = 0;
             if (myArchive.contains(pSD)) {
-                myArchive.get(myArchive.indexOf(pSD)).getRip().setStatus(3);
-                System.out.println("setDone in JDB: ok");
+                Prenotazione p = myArchive.get(myArchive.indexOf(pSD));
+                if (p.getRip().getStatus() != 4) {
+                    Connection conn1 = null;
+                    nUpd = 0;
+
+                    //DB
+                    try {
+                        conn1 = DriverManager.getConnection(urlDB, userDB, pswDB);
+                        if (conn1 != null) {
+                            System.out.println("\nConnected to the database test - in setDone");
+                            Ripetizioni rSD = pSD.getRip();
+                            String qry = "UPDATE `prenotazioni` SET `status`='3' WHERE " +
+                                    "user=? and giorno=? and corso_id=(select id from corso where nome=?) " +
+                                    "and prof_id=(select id from professore where cognome=?) and ora=? ";
+                            String userDC = pSD.getUser();
+                            String giornoDC = rSD.getGiorno();
+                            String corsoDC = rSD.getCorso();
+                            String profDC = rSD.getProf();
+                            int oraDC = rSD.getOra();
+                            PreparedStatement stUpd = conn1.prepareStatement(qry);
+                            stUpd.setString(1, userDC);
+                            stUpd.setString(2, giornoDC);
+                            stUpd.setString(3, corsoDC);
+                            stUpd.setString(4, profDC);
+                            stUpd.setInt(5, oraDC);
+                            nUpd = stUpd.executeUpdate();
+                        }
+                    } catch (SQLException e) {
+                        throw new ServletException("SQL exc in setDone: " + e.getMessage());
+                    } finally {
+                        if (conn1 != null) {
+                            try {
+                                conn1.close();
+                            } catch (SQLException e2) {
+                                System.out.println(e2.getMessage());
+                            }
+                        }
+                    }
+
+                    //JDB
+                    p.getRip().setStatus(3);
+
+                    System.out.println("Upd done: " + nUpd + " tuple modificate");
+
+                } else {
+                    System.out.println("prenotazione disdetta");
+                }
             } else {
                 System.out.println("prenotazione not found in JDB");
-            }
-            //rimozione DB
-            Connection conn1 = null;
-            int nUpd = 0;
-
-            try {
-                conn1 = DriverManager.getConnection(urlDB, userDB, pswDB);
-                if (conn1 != null) {
-                    System.out.println("\nConnected to the database test - in setDone");
-                    Ripetizioni rSD = pSD.getRip();
-                    String qry = "UPDATE `prenotazioni` SET `status`='3' WHERE " +
-                            "user=? and giorno=? and corso_id=(select id from corso where nome=?) " +
-                            "and prof_id=(select id from professore where cognome=?) and ora=? ";
-                    String userDC = pSD.getUser();
-                    String giornoDC = rSD.getGiorno();
-                    String corsoDC = rSD.getCorso();
-                    String profDC = rSD.getProf();
-                    int oraDC = rSD.getOra();
-                    PreparedStatement stUpd = conn1.prepareStatement(qry);
-                    stUpd.setString(1, userDC);
-                    stUpd.setString(2, giornoDC);
-                    stUpd.setString(3, corsoDC);
-                    stUpd.setString(4, profDC);
-                    stUpd.setInt(5, oraDC);
-                    nUpd = stUpd.executeUpdate();
-                    System.out.println("DB upd done: " + nUpd + " tuple modificate");
-                }
-            } catch (SQLException e) {
-                throw new ServletException("SQL exc in setDone: " + e.getMessage());
-            } finally {
-                if (conn1 != null) {
-                    try {
-                        conn1.close();
-                    } catch (SQLException e2) {
-                        System.out.println(e2.getMessage());
-                    }
-                }
             }
             return nUpd;
         } else {
@@ -635,6 +618,7 @@ public class DBA {
             throw new ServletException("user role needed - setDone");
         }
     }
+
 
 
     //ADMIN OPS
