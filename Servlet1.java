@@ -30,64 +30,82 @@ public class Servlet1 extends HttpServlet{
     Gson jsonIzer = new Gson();
     String user, psw;
     DBA dao;
+    String initExc = "no";
+    boolean initExcChecked = true;
+    PrintWriter out = null;
 
     void manageServletException(ServletException e){
         String method = (e.getStackTrace())[0].getMethodName();
-        // todo gestire le eccezioni meglio perchè dio fa
+        // todo gestire le eccezioni meglio perchè dio fa,
+        //  per farlo mettere dei messaggi semplici nelle
+        //  eccezioni e poi quando chiamo i metodi catturarle
+        //  e leggere i messaggi nella servlet e in base a
+        //  cosa leggo mettere valori diversi nella response
+        //  e poi interperetarli nel frontend
     }
 
-    void dp(String text, PrintWriter pw){
+    void dp(String text){
         System.out.println(text);
-        pw.print(text);
+        if(out!=null){
+            out.print(text);
+        }
     }
 
     public void init(){
         System.out.println("servlet 1 - init");
         try {
             dao = new DBA();
-//            DBA.registerDriver();
             } catch (ServletException e) {
-            e.printStackTrace();
+            //todo questa dovrebbe poi essere sostituita dal manageException
+            initExc = e.getMessage();
+            initExcChecked = false;
         }
     }
 
     @Override
     protected void doGet (HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
-        System.out.println("servlet1 - in doGet");
+        System.out.println("____________________________________________________________________________");
+        System.out.println("\t/\t/\t/\t/\t/\t/\t/\tNEW GET REQUEST\t\\\t\\\t\\\t\\\t\\\t\\\t\\");
         HttpSession s = req.getSession();
         processRequest(req, resp);
     }
 
     @Override
     protected void doPost (HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
-        System.out.println("servlet1 - in doPost");
+        System.out.println("____________________________________________________________________________");
+        System.out.println("\t/\t/\t/\t/\t/\t/\t/\tNEW POST REQUEST\t\\\t\\\t\\\t\\\t\\\t\\\t\\");
         HttpSession s = req.getSession();
         processRequest(req, resp);
     }
 
-    // todo ogni sout va sostituito con un write sul printwriter
-    //  (? si o no? o devo farlo in altro modo?) o con le eccezioni
-
     //todo aggiornare con i nuovi metodi
 
-    //l'azione da fare va inserita in un attribute "action" e il risultato viene messo in un attribute "result"
+    //l'azione da fare va inserita in un parameter "action" e il risultato viene messo nella response
     private void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
-        String action = req.getParameter("action");
+        out = resp.getWriter();
+        resp.setContentType("text/plain");
+        resp.addHeader("Access-Control-Allow-Origin", "*");
+
+        if(!initExcChecked){
+            System.out.println("Exc init ");
+            dp(initExc);
+            initExcChecked = true;
+        } else {
 
         Enumeration<String> params = req.getParameterNames();
+        System.out.println("Request parameters:");
         while(params.hasMoreElements()){
             String current = params.nextElement();
-            System.out.println(current + ": " + req.getAttribute(current));
+            System.out.println("\t" + current + ": " + req.getParameter(current));
         }
-        System.out.println("in processRequest: action "+ action);
 
-        PrintWriter out = resp.getWriter();
-        resp.setStatus(200);
-        resp.setContentType("text/plain");
+        String action = req.getParameter("action");
+        System.out.println("in processRequest: action "+ action);
 
         switch(action){
             case "viewPrenotabili":{
                 resp.setContentType("application/json");
+                resp.setStatus(200);
                 out.print(jsonIzer.toJson(dao.prenotabili()));
                 break;
             }
@@ -95,6 +113,7 @@ public class Servlet1 extends HttpServlet{
                 String filter = req.getParameter("filter");
                 if(filter!=null){
                     resp.setContentType("application/json");
+                    resp.setStatus(200);
                     out.print(jsonIzer.toJson(dao.jsonQryRip(filter)));
                 } else System.out.println("no filter received");
                 break;
@@ -103,13 +122,16 @@ public class Servlet1 extends HttpServlet{
                 String un = req.getParameter("username");
                 String psw = req.getParameter("password");
                 String authOut = dao.auth(un, psw);
+                resp.setStatus(200);
                 out.print(authOut);
                 if(dao.getRole().equals("user") || dao.getRole().equals("admin")){
                     HttpSession s = req.getSession();
                     s.setAttribute("username", dao.getUsername());
                     s.setAttribute("role", dao.getRole());
-                    System.out.println("session tracked");
-                    //inserire le cose da fare a livello di dao una volta che hai fatto il login
+//                    String sessionID = s.getId();
+//                    String url = resp.encodeURL("servlet1");
+//                    System.out.println(url);
+                    System.out.println("session tracked: role " + s.getAttribute("role"));
                     dao.updMyArchive();
                 }
                 break;
@@ -120,150 +142,195 @@ public class Servlet1 extends HttpServlet{
                     String rdpJson = req.getParameter("rdp");
                     if(rdpJson != null){
                         Ripetizioni rdp = jsonIzer.fromJson(rdpJson, Ripetizioni.class);
-                        if(dao.prenota(rdp) == 1){
-                            dp("prenota: OK", out);
+                        System.out.println(dao.getUsername() + " vuole prenotare la ripetizione " + rdp);
+                        int insTuple = 0;
+                        try{
+                            insTuple = dao.prenota(rdp);
+                        } catch (Exception e){
+                            e.printStackTrace();
+                        }
+                        if(insTuple == 1){
+                            dp("prenota: OK");
                         } else {
-                            dp("prenota: FAIL", out);
+                            resp.setStatus(500);
+                            dp("prenota: FAIL");
                             //todo secondo me qua c'è da inserire la gestione per bene delle
                             // eccezioni, tipo che stampo anche quello che dice l'eccezione
                             // in modo che il frontend sa bene cosa fare e cosa dire all'user
                             // (tutta la parte di gestione del feedback che deve arrivare all'user)
                         }
-                    } else dp("ripetizione mancante", out);
-                } else dp("no permission", out);
+                    } else System.out.println("ripetizione mancante");
+                } else System.out.println("no permission");
                 break;
             }
             case "disdici":{    //disdici pren - FATTO
-                String role = (String) req.getSession().getAttribute("role");
+                String role = dao.getRole();
                 if(role.equals("user") || role.equals("admin")){
                     String pddJson = req.getParameter("pdd");
                     if(pddJson != null){
                         Prenotazione pdd = jsonIzer.fromJson(pddJson, Prenotazione.class);
                         if(dao.disdici(pdd) == 1){
-                            dp("disdici: OK", out);
+                            dp("disdici: OK");
                         } else {
-                            dp("disdici: FAIL", out);
+                            dp("disdici: FAIL");
                             //eccezioni
                         }
-                    } else dp("prenotazione mancante", out);
-                } else dp("no permit to do this op", out);
+                    } else dp("prenotazione mancante");
+                } else dp("no permit to do this op");
+                break;
+            }
+            case "setDone":{    //disdici pren - FATTO
+                String role = dao.getRole();
+                if(role.equals("user") || role.equals("admin")){
+                    String prenJson = req.getParameter("pdd");
+                    if(prenJson != null){
+                        Prenotazione pren = jsonIzer.fromJson(prenJson, Prenotazione.class);
+                        if(dao.setDone(pren) == 1){
+                            dp("setDone: OK");
+                        } else {
+                            dp("setDone: FAIL");
+                            //eccezioni
+                        }
+                    } else dp("prenotazione mancante");
+                } else dp("no permit to do this op");
                 break;
             }
 
-            case "myPrenots":{  //mostra le mie prenotazioni - FATTO
-                String role = (String) req.getSession().getAttribute("role");
+            case "myPrenotazioni":{  //mostra le mie prenotazioni - FATTO
+                String role = dao.getRole();
                 if(role.equals("user") || role.equals("admin")){
                     resp.setContentType("application/json");
+                    resp.setStatus(200);
                     dao.updMyArchive();
                     out.print(jsonIzer.toJson(dao.getMyArchive()));
-                } else dp("no permission", out);
+                } else dp("no permission");
                 break;
             }
-//TODO DA QUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
             case "addProfessore":{       //admin: inserisci prof
-                String role = (String) req.getSession().getAttribute("role");
+                String role = dao.getRole();
                 if(role.equals("admin")){
-                    String pN = (String) req.getParameter("profNome");
-                    String pC = (String) req.getParameter("profCogn");
-                    if(pN == null || pC == null){
+                    String profNome = req.getParameter("profNome");
+                    String profCogn = req.getParameter("profCogn");
+                    if(profNome == null || profCogn == null){
                         System.out.println("nome o cognome null");
                     } else {
-                        dao.insertProf(pN, pC);
+                        if(dao.insertProf(profNome, profCogn) == 1)
+                            dp("insProf: OK");
+                        else
+                            dp("insProf: FAIL");
                     }
                 } else {
-                    System.out.println("no permit to do this op");
+                    dp("not an admin");
                 }
                 break;
             }
-            case "removeProfessore":{       //admin: inserisci prof
-                String role = (String) req.getSession().getAttribute("role");
+            case "removeProfessore":{       //admin: remove prof
+                String role = dao.getRole();
                 if(role.equals("admin")){
-                    String pN = (String) req.getParameter("profNome");
-                    String pC = (String) req.getParameter("profCogn");
-                    if(pN == null || pC == null){
+                    String profNome = req.getParameter("profNome");
+                    String profCogn = req.getParameter("profCogn");
+                    if(profNome == null || profCogn == null){
                         System.out.println("nome o cognome null");
                     } else {
-                        dao.removeProf(pN, pC);
+                        if(dao.removeProf(profNome, profCogn) == 1)
+                            dp("removeProf: OK");
+                        else
+                            dp("removeProf: FAIL");
                     }
                 } else {
-                    System.out.println("no permit to do this op");
+                    dp("not an admin");
                 }
                 break;
             }
             case "addCorso":{       //admin: inserisci corso
-                String role = (String) req.getSession().getAttribute("role");
+                String role = dao.getRole();
                 if(role.equals("admin")){
-                    String cN = (String) req.getParameter("corsoNome");
-                    if(cN == null){
-                        System.out.println("course name null");
+                    String corso = req.getParameter("corso");
+                    if(corso == null){
+                        System.out.println("nome null");
                     } else {
-                        dao.insertCorso(cN);
+                        if(dao.insertCorso(corso) == 1)
+                            dp("insCorso: OK");
+                        else
+                            dp("insCorso: FAIL");
                     }
                 } else {
-                    System.out.println("no permit to do this op");
+                    dp("not an admin");
                 }
                 break;
             }
-            case "removeCorso":{       //admin: inserisci corso
-                String role = (String) req.getSession().getAttribute("role");
+            case "removeCorso":{       //admin: remove corso
+                String role = dao.getRole();
                 if(role.equals("admin")){
-                    String cN = (String) req.getParameter("corsoNome");
-                    if(cN == null){
-                        System.out.println("course name null");
+                    String corso = req.getParameter("corso");
+                    if(corso == null){
+                        System.out.println("nome null");
                     } else {
-                        dao.removeCorso(cN);
+                        if(dao.removeCorso(corso) == 1)
+                            dp("removeCorso: OK");
+                        else
+                            dp("removeCorso: FAIL");
                     }
                 } else {
-                    System.out.println("no permit to do this op");
+                    dp("not an admin");
                 }
                 break;
             }
             case "addInsegnamento":{       //admin: inserisci insegnamneto
-                String role = (String) req.getSession().getAttribute("role");
+                String role = dao.getRole();
                 if(role.equals("admin")){
-                    String pda = (String) req.getParameter("pda");
-                    String cda = (String) req.getParameter("cda");
-                    if(cda == null || pda == null){
-                        dao.insertInsegnamento(jsonIzer.fromJson(cda, String.class) ,
-                                            jsonIzer.fromJson(pda, Professore.class));
+                    String prof = req.getParameter("prof");
+                    String corso = req.getParameter("corso");
+                    if(corso == null || prof == null){
+                        dao.insertInsegnamento(jsonIzer.fromJson(corso, String.class) ,
+                                            jsonIzer.fromJson(prof, Professore.class));
                     } else {
                         System.out.println("corso o prof null");
                     }
                 } else {
-                    System.out.println("no permit to do this op");
+                    dp("not an admin");
                 }
 
                 break;
             }
             case "removeInsegnamento":{       //admin: inserisci insegnamneto
-                String role = (String) req.getSession().getAttribute("role");
+                String role = dao.getRole();
                 if(role.equals("admin")){
-                    String pda = (String) req.getParameter("pda");
-                    String cda = (String) req.getParameter("cda");
-                    if(cda == null || pda == null){
-                        dao.removeInsegnamento(jsonIzer.fromJson(cda, String.class) ,
-                                jsonIzer.fromJson(pda, Professore.class));
+                    String prof = req.getParameter("prof");
+                    String corso = req.getParameter("corso");
+                    if(corso == null || prof == null){
+                        int result = dao.removeInsegnamento(jsonIzer.fromJson(corso, String.class) ,
+                                jsonIzer.fromJson(prof, Professore.class));
+                        if(result == 1)
+                            dp("removeInsegnamento: OK");
+                        else
+                            dp("removeInsegnamento: OK");
                     } else {
                         System.out.println("corso o prof null");
                     }
                 } else {
-                    System.out.println("no permit to do this op");
+                    dp("not an admin");
                 }
 
                 break;
             }
             case "viewAllPrenot":{      //admin: view all prenotazioni
-                String role = (String) req.getSession().getAttribute("role");
+                String role = dao.getRole();
                 if(role.equals("admin")){
-                    req.setAttribute("result", jsonIzer.toJson(dao.getAllPrenot()));
+                    out.print(jsonIzer.toJson(dao.getAllPrenot()));
+                    dp("allPrenot: sent");
                 } else {
-                    System.out.println("no permit to do this op");
+                    dp("no permission");
                 }
 
                 break;
             }
         }
+        System.out.println("\t\\\t\\\t\\\t\\\t\\\t\\\t\\\tEND REQUEST\t/\t/\t/\t/\t/\t/\t/\t " +
+                "\n____________________________________________________________________________");
+
         out.close();
+        }
     }
 }
 
