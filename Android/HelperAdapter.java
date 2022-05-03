@@ -37,7 +37,6 @@ public class HelperAdapter extends RecyclerView.Adapter<HelperAdapter.MyViewClas
     ArrayList<Ripetizioni> ripetizioni;
     Context context;
     boolean prenotato = false;
-    LessonLocalStore lessonLocalStore;
     String MYURL = MainActivity.MYURL; // url della servlet
     int ID;
     Gson gson = new Gson();
@@ -46,7 +45,6 @@ public class HelperAdapter extends RecyclerView.Adapter<HelperAdapter.MyViewClas
     public HelperAdapter(ArrayList<Ripetizioni> ripetizioniArrayList,Context context) {
         this.ripetizioni = ripetizioniArrayList;
         this.context = context;
-        lessonLocalStore = new LessonLocalStore(context);
     }
 
     @NonNull
@@ -63,6 +61,9 @@ public class HelperAdapter extends RecyclerView.Adapter<HelperAdapter.MyViewClas
         holder.name.setText(ripetizioni.get(position).getProf());
         holder.materia.setText(ripetizioni.get(position).getCorso());
         holder.orario.setText(String.valueOf(ripetizioni.get(position).getOra()));
+        holder.giorno.setText(ripetizioni.get(position).getGiorno());
+        holder.stato.setText(ripetizioni.get(position).stato());
+
 
 
         holder.itemView.setOnClickListener(new View.OnClickListener() {
@@ -165,12 +166,16 @@ public class HelperAdapter extends RecyclerView.Adapter<HelperAdapter.MyViewClas
         TextView name;
         TextView materia;
         TextView orario;
+        TextView giorno;
+        TextView stato;
 
         public MyViewClass(@NonNull View itemView){
             super(itemView);
             name = (TextView) itemView.findViewById(R.id.name);
             materia = (TextView) itemView.findViewById(R.id.materia);
             orario = (TextView) itemView.findViewById(R.id.orario);
+            giorno = (TextView) itemView.findViewById(R.id.giorno);
+            stato = (TextView) itemView.findViewById(R.id.stato);
         }
     }
 }

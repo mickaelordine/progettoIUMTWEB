@@ -32,6 +32,8 @@ public class BookingTestActivity extends AppCompatActivity {
     Gson gson = new Gson();
     String MYURL = MainActivity.MYURL;
     ArrayList<Ripetizioni> ripetizioniList = new ArrayList<>();
+    ArrayList<Ripetizioni> filtredRep = new ArrayList<>();
+    ArrayList<Ripetizioni> arrayList = new ArrayList<>();
     RequestQueue mQueue;
 
 
@@ -66,7 +68,7 @@ public class BookingTestActivity extends AppCompatActivity {
                 try {
                     Ripetizioni[] ripetizioni = gson.fromJson(response,Ripetizioni[].class);
                     ripetizioniList.addAll(Arrays.asList(ripetizioni));
-
+                    arrayList = ripetizioniList;
                 } catch (Exception exception) {
                     exception.printStackTrace();
                 }
@@ -106,7 +108,7 @@ public class BookingTestActivity extends AppCompatActivity {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
 
                 //questi clear resettano i valori degli array ogni volta ogni volta
-                //ripetizioniList.clear();
+                ripetizioniList.clear();
 
                 String daySelected = null;
                 switch (position){ //switch per vedere che giorno e'
@@ -131,24 +133,24 @@ public class BookingTestActivity extends AppCompatActivity {
                         break;
                 }
 
-                //QUI INIZIA LA COMPILAZIONE DI ELEMENTI NEL RECYCLERVIEW
 
+                //QUI INIZIA LA COMPILAZIONE DI ELEMENTI NEL RECYCLERVIEW
                 if(position == 0){ // se è any carichiamo tutto
                     HelperAdapter helperAdapter = new HelperAdapter(ripetizioniList,BookingTestActivity.this);
                     recyclerView.setAdapter(helperAdapter);
 
                 } else if(position > 0 && position < categoryDays.length){ //qui abbiamo valori da Lun a Ven
-                    ArrayList<Ripetizioni> filtredRep = new ArrayList<>();
+                    Toast.makeText(BookingTestActivity.this, "" + ripetizioniList.toString(), Toast.LENGTH_SHORT).show();
                     for (int i = 0; i<ripetizioniList.size();i++){
                         if(ripetizioniList.get(i).getGiorno().equals(daySelected)) {
                         filtredRep.add(ripetizioniList.get(i));
                     }
-                        HelperAdapter helperAdapter = new HelperAdapter(filtredRep,BookingTestActivity.this);
-                        recyclerView.setAdapter(helperAdapter);
-                }} else {
+                }
+                    HelperAdapter helperAdapter = new HelperAdapter(filtredRep,BookingTestActivity.this);
+                    recyclerView.setAdapter(helperAdapter);
+                } else {
                     Toast.makeText(BookingTestActivity.this, "Selected Category doesn't exist!", Toast.LENGTH_SHORT).show();
                 }
-
             }
 
             @Override
@@ -157,21 +159,6 @@ public class BookingTestActivity extends AppCompatActivity {
         });
 
     }
-
-//    private String JsonDataFromAsset() throws IOException {
-//        String json=null;
-//        try {
-//            InputStream inputStream = getAssets().open("corsi2.json");
-//            int sizeOfFile = inputStream.available();
-//            byte[] bufferData = new byte[sizeOfFile];
-//            inputStream.read(bufferData);
-//            inputStream.close();
-//            json = new String(bufferData, "UTF-8");
-//        } catch (IOException e){
-//            e.printStackTrace();
-//        }
-//        return json;
-//    }
 
     @Override
     public void onBackPressed(){
