@@ -1,0 +1,20 @@
+/*
+SITO:
+- la rimozione associazione corso prof non deve essere rimosso dallo storico degli utenti
+
+SERVLET:
+- aggiungi il fatto che le filtred usino le possibili prenotabili e non tutte le ripetizioni perchè se no posso prenotare ripetizioni   
+    già prenotate
+
+- la rimozione del prof e del corso non lo elimina, continua a comparire
+
+modificato a riga 261 del servlet1 l'accesso alla funzione dao.getAllPrneot con DBA.getAllPrneot
+
+
+aggiunto setRdpToHistory per creare una tabella history diversa e scollegata dai prof e corsi, così se si eliminano non li perdiamo,
+da ultimare l'inserimento e anche da lato sitoweb, da vedere come disdire le history che ora sono scollegate dal resto.
+
+commentato dao.updMyArchive riga 113
+
+*/
+
